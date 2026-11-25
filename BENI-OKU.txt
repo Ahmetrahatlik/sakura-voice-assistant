@@ -1,0 +1,10 @@
+# Sakura
+
+Ayrıntılı bilgi için README.md dosyasına bak.
+
+Parçalar
+- sakura_asistan.py ana döngü
+- beyin.py Claude Code beyni
+- hafiza.py hafıza
+- telegram_kopru.py Telegram
+- kamera.py yüz tanıma

@@ -1,0 +1,10 @@
+# Sakura'nın telaffuz sözlüğü (yalnız ses; balonda asıl yazım görünür). Satır: yazılan = okunacak
+# Kelimenin başı eşleşir, ek korunur ("YouTube'da" → "Yutubda"). Büyük/küçük harf fark etmez.
+# Seçim: ses\test\aday_test.py ile her aday 4 kez okutuldu, Whisper'ın en iyi duyduğu yazım (4 Kas 2026).
+Claude Code = Klod Kod      # orijinal 2/4
+Claude = Klod               # Whisper her yazımı "Cloud" duyuyor; Türkçe okunuşu doğru olan bu
+Anthropic = Antropik        # 0/4 → 3/4
+Word = Vörd                 # 1/4 → 4/4
+YouTube = Yutub             # 2/4 → 4/4
+Google = Gugıl              # 3/4 → 4/4
+çevrimdışı = çevrim dışı    # 0/4 → 3/4

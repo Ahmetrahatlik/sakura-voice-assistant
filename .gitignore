@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+venv*/
+.env
+
+# Kişisel veri — ASLA repoya girmez
+beyin/HAFIZA.md
+beyin/GUNLUK.md
+beyin/gunluk/
+beyin/ekran.png
+telegram.json
+gelisim.json
+is_avcisi.json
+is_avcisi_haric.txt
+is_avcisi_calisma/
+arama_gizli.txt
+isler/
+yuz_izi/
+ses_izi/
+duyulan/
+hazir_ses/
+test_ses/
+
+# Loglar ve çalışma işaretleri
+*.log
+*.out
+*.err
+*.flag
+
+# Model ağırlıkları (README'deki adreslerden indirilir)
+*.onnx
+*.pt
+*.pth
+*.safetensors
+*.ckpt
+modeller/
+
+# Yedek klasörleri
+yedek-*/
+*-oncesi

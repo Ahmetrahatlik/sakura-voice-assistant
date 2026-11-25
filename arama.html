@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Sakura'yı Ara</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root { --bg: #17121f; --kart: #241b30; --pembe: #ff7eb6; --mor: #9b7bff; --yazi: #f4eefc; --soluk: #a99bbd; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--yazi);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { display: flex; flex-direction: column; align-items: center; padding: 28px 16px 20px; }
+  .yuz { width: 190px; height: 190px; border-radius: 50%; position: relative;
+    background: radial-gradient(circle at 50% 35%, #3a2d52, #1d1628 70%);
+    box-shadow: 0 10px 40px rgba(255, 126, 182, .25); }
+  .yuz img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: 50% 0; display: block; }
+  /* duygu işareti (masaüstündeki gibi: kalp, 💢, damla...) */
+  #isaret { position: absolute; left: -6px; top: 4px; font-size: 34px; opacity: 0; transform: scale(.6);
+    transition: opacity .25s, transform .25s; pointer-events: none; }
+  #isaret.goster { opacity: 1; transform: scale(1); }
+  body.caliyor .yuz { animation: titre .9s ease-in-out infinite; }
+  @keyframes titre { 0%,100% { transform: rotate(0) } 10%,30% { transform: rotate(-4deg) } 20%,40% { transform: rotate(4deg) } 50% { transform: rotate(0) } }
+  .yuz::after { content: ""; position: absolute; inset: -10px; border-radius: 50%; border: 3px solid var(--pembe);
+    opacity: 0; }
+  body.dinliyor .yuz::after { animation: nabiz 1.6s ease-out infinite; }
+  body.dusunuyor .yuz { opacity: .8; }
+  @keyframes nabiz { from { transform: scale(.95); opacity: .9 } to { transform: scale(1.25); opacity: 0 } }
+  @keyframes sallan { from { transform: scale(1) } to { transform: scale(1.05) } }
+  h1 { font-size: 22px; margin: 18px 0 4px; }
+  #durum { color: var(--soluk); font-size: 15px; min-height: 20px; }
+  #yazi { flex: 1; width: 100%; max-width: 480px; overflow-y: auto; margin: 18px 0; display: flex; flex-direction: column; gap: 8px; }
+  .b { padding: 9px 13px; border-radius: 16px; max-width: 85%; font-size: 15px; line-height: 1.35; }
+  .b.dino { align-self: flex-end; background: var(--mor); color: #fff; border-bottom-right-radius: 4px; }
+  .b.sakura { align-self: flex-start; background: var(--kart); border-bottom-left-radius: 4px; }
+  button { border: 0; border-radius: 999px; font-size: 17px; font-weight: 600; padding: 16px 34px; color: #fff; cursor: pointer; }
+  #ara { background: #2fbf71; }
+  #kapat { background: #e5484d; display: none; }
+  /* 5 Kas: basılı tutunca Android yazıyı seçiyor, dokunma iptal olup kapanmıyordu → seçim/menü/kaydırma kapalı, düğme büyük */
+  button, #kapat { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none;
+    -webkit-tap-highlight-color: transparent; }
+  #kapat { padding: 22px 48px; min-width: 260px; }
+  body.acik #ara { display: none; }
+  body.acik #kapat { display: inline-block; }
+  #araclar { display: none; gap: 14px; margin-bottom: 14px; }
+  body.acik #araclar { display: flex; }
+  .ac { background: var(--kart); font-size: 15px; padding: 12px 18px; border: 2px solid transparent; }
+  .ac.secili { border-color: var(--pembe); }
+  #mik.secili { background: #5a2330; border-color: #e5484d; }
+  body.sessiz .yuz::after { animation: none; }
+</style>
+</head>
+<body>
+  <div class="yuz"><img id="resim" src="resim/b_0.webp" alt="Sakura"><div id="isaret"></div></div>
+  <h1>Sakura</h1>
+  <div id="durum">Aramak için dokun</div>
+  <div id="yazi"></div>
+  <div id="araclar">
+    <button class="ac" id="mik">🎙️ Mikrofon açık</button>
+    <button class="ac secili" id="hop">🔊 Hoparlör</button>
+  </div>
+  <button id="ara">📞 Ara</button>
+  <button id="kapat">Kapatmak için basılı tut</button>
+<script>
+const tg = window.Telegram && Telegram.WebApp;
+if (tg) {
+  tg.ready(); tg.expand();
+  // 5 Kas: kulak/yanak ekranı aşağı kaydırınca Telegram pencereyi kapatıyordu → kaydırarak kapatma kapalı,
+  // kapatmadan önce Telegram onay sorar
+  try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (e) {}
+}
+const $ = id => document.getElementById(id);
+const DURUM = { dinliyor: "Dinliyorum… konuşabilirsin", dusunuyor: "Düşünüyor…", konusuyor: "Konuşuyor…" };
+let ws, ctx, kaynak, isleyici, akis, durum = "", sonCalma = 0, bittiGeldi = false;
+let calanlar = [], calmaNesil = 0;   // 5 Kas söz kesme: sunucu "sus" deyince çalan/sıradaki sesler durdurulur
+let sessiz = false, hoparlor = true;
+const arayan = new URLSearchParams(location.search).get("arayan") === "1";   // Sakura aradı, Dino açacak
+
+// Sakura'nın resmi: dinlerken nefes alır (yavaş), konuşurken ağzı oynar (Sakura.exe export kareleri)
+const NEFES = [0, 4, 8, 12, 16, 20].map(i => "resim/b_" + i + ".webp");
+const AGIZ = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22].map(i => "resim/k_" + i + ".webp");
+[...NEFES, ...AGIZ].forEach(u => { const i = new Image(); i.src = u; });   // önceden yükle
+let kare = 0;
+(function oynat() {
+  const konusuyor = durum === "konusuyor", liste = konusuyor ? AGIZ : NEFES;
+  kare = (kare + 1) % liste.length;
+  $("resim").src = liste[kare];
+  setTimeout(oynat, konusuyor ? 90 : 280);   // ağız hızlı, nefes yavaş
+})();
+const ISARET = { nese: "♪", sevgi: "❤️", utangac: "💗", sinirli: "💢", uzgun: "💧", agla: "😭", saskin: "❗",
+                 dusunce: "💭", uykulu: "💤", gurur: "✨", goz_kirp: "😉" };
+let isaretZaman;
+function isaretGoster(ifade) {
+  const i = ISARET[ifade];
+  if (!i) return;
+  $("isaret").textContent = i; $("isaret").classList.add("goster");
+  clearTimeout(isaretZaman); isaretZaman = setTimeout(() => $("isaret").classList.remove("goster"), 2500);
+}
+if (arayan) {
+  document.body.classList.add("caliyor");
+  document.getElementById("durum").textContent = "📞 Sakura seni arıyor…";
+  document.getElementById("ara").textContent = "📞 Aç";
+}
+
+function durumYap(d) {
+  durum = d;
+  document.body.classList.remove("dinliyor", "dusunuyor", "konusuyor");
+  document.body.classList.add(d);
+  $("durum").textContent = (sessiz && d === "dinliyor") ? "Mikrofon kapalı, Sakura seni duymuyor" : (DURUM[d] || d);
+}
+function balon(kim, metin) {
+  const b = document.createElement("div");
+  b.className = "b " + kim; b.textContent = metin;
+  $("yazi").appendChild(b); $("yazi").scrollTop = 1e9;
+}
+
+// telefondan gelen sesi 16 kHz'e indirip PCM16 olarak gönder. 5 Kas: Sakura düşünürken/konuşurken de gönderilir;
+// sunucu Dino'nun araya girdiğini anlarsa "sus" der (Sakura'nın kendi yankısını ses izinden ayırır)
+function gonder(girdi, oran) {
+  if (sessiz || !["dinliyor", "dusunuyor", "konusuyor"].includes(durum) || !ws || ws.readyState !== 1) return;
+  const n = Math.floor(girdi.length * 16000 / oran), cik = new Int16Array(n);
+  for (let i = 0; i < n; i++) {
+    const v = girdi[Math.floor(i * oran / 16000)];
+    cik[i] = Math.max(-1, Math.min(1, v)) * 32767;
+  }
+  ws.send(cik.buffer);
+}
+
+// Sakura'nın sesini (24 kHz PCM16) sırayla çal
+function cal(veri) {
+  const s = new Int16Array(veri), f = new Float32Array(s.length);
+  for (let i = 0; i < s.length; i++) f[i] = s[i] / 32768;
+  const buf = ctx.createBuffer(1, f.length, 24000);
+  buf.copyToChannel(f, 0);
+  const src = ctx.createBufferSource();
+  src.buffer = buf; src.connect(ctx.destination);
+  const bas = Math.max(ctx.currentTime + 0.05, sonCalma);
+  src.start(bas); sonCalma = bas + buf.duration;
+  calanlar.push(src);
+  src.onended = () => { calanlar = calanlar.filter(x => x !== src); };
+  durumYap("konusuyor");
+}
+function bitisiBekle(nesil = calmaNesil) {
+  // tüm sesler çalınınca dinlemeye dön (araya söz kesme girdiyse bu bekleme iptal)
+  if (nesil !== calmaNesil) return;
+  const kalan = sonCalma - ctx.currentTime;
+  if (kalan > 0.05) { setTimeout(() => bitisiBekle(nesil), kalan * 1000 + 50); return; }
+  bittiGeldi = false;
+  setTimeout(() => { if (nesil === calmaNesil && ws && ws.readyState === 1) { ws.send(JSON.stringify({ tip: "dinliyorum" })); durumYap("dinliyor"); } }, 400);
+}
+function sus() {
+  calmaNesil++;
+  calanlar.forEach(s => { try { s.stop(); } catch (e) {} });
+  calanlar = []; sonCalma = 0; bittiGeldi = false;
+  durumYap("dinliyor");
+}
+
+// Hoparlör: Android'de yankı engelleme açıkken telefon "görüşme" moduna geçip sesi kulaklıktan (ahizeden) verir;
+// kapalıyken ses hoparlörden çıkar. Sakura konuşurken mikrofon zaten gönderilmediği için yankı sorun olmaz.
+// iPhone'da ses yönü sayfadan seçilemiyor (iOS kendi karar verir).
+async function mikrofonAc() {
+  try { isleyici && isleyici.disconnect(); kaynak && kaynak.disconnect(); } catch (e) {}
+  akis && akis.getTracks().forEach(t => t.stop());
+  akis = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: !hoparlor, noiseSuppression: true, autoGainControl: true } });
+  kaynak = ctx.createMediaStreamSource(akis);
+  isleyici = ctx.createScriptProcessor(4096, 1, 1);
+  isleyici.onaudioprocess = e => gonder(e.inputBuffer.getChannelData(0), ctx.sampleRate);
+  kaynak.connect(isleyici); isleyici.connect(ctx.destination);
+}
+$("mik").onclick = () => {
+  sessiz = !sessiz;
+  $("mik").classList.toggle("secili", sessiz);
+  $("mik").textContent = sessiz ? "🔇 Mikrofon kapalı" : "🎙️ Mikrofon açık";
+  document.body.classList.toggle("sessiz", sessiz);
+  if (sessiz) $("durum").textContent = "Mikrofon kapalı, Sakura seni duymuyor";
+  else if (durum) durumYap(durum);
+};
+$("hop").onclick = async () => {
+  hoparlor = !hoparlor;
+  $("hop").classList.toggle("secili", hoparlor);
+  $("hop").textContent = hoparlor ? "🔊 Hoparlör" : "📱 Kulaklık";
+  try { await mikrofonAc(); } catch (e) {}
+};
+
+$("ara").onclick = async () => {
+  try {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    await ctx.resume();
+    await mikrofonAc();
+  } catch (e) { $("durum").textContent = "Mikrofona izin vermen lazım 🙏"; return; }
+
+  ws = new WebSocket(location.origin.replace(/^http/, "ws") + "/ws");
+  ws.binaryType = "arraybuffer";
+  ws.onopen = () => { ws.send(JSON.stringify({ tip: "giris", initData: tg ? tg.initData : "", arayan })); };
+  document.body.classList.remove("caliyor");
+  ws.onmessage = e => {
+    if (typeof e.data !== "string") { cal(e.data); return; }
+    const d = JSON.parse(e.data);
+    if (d.tip === "durum") durumYap(d.durum);
+    else if (d.tip === "dino") balon("dino", d.metin);
+    else if (d.tip === "sakura") { balon("sakura", d.metin); isaretGoster(d.ifade); }
+    else if (d.tip === "ifade") isaretGoster(d.ifade);
+    else if (d.tip === "bitti") { bittiGeldi = true; bitisiBekle(); }
+    else if (d.tip === "sus") sus();
+    else if (d.tip === "hata") $("durum").textContent = d.metin;
+  };
+  ws.onclose = () => { kapat(false); $("durum").textContent = "Arama bitti"; };
+  document.body.classList.add("acik");
+  $("durum").textContent = "Bağlanıyor…";
+  if (tg && tg.enableClosingConfirmation) tg.enableClosingConfirmation();
+};
+
+function kapat(kullanici = true) {
+  document.body.classList.remove("acik", "dinliyor", "dusunuyor", "konusuyor");
+  try { isleyici && isleyici.disconnect(); kaynak && kaynak.disconnect(); } catch (e) {}
+  akis && akis.getTracks().forEach(t => t.stop());
+  if (kullanici && ws) ws.close();
+  if (tg && tg.disableClosingConfirmation) tg.disableClosingConfirmation();
+  durum = "";
+}
+// kulak yanlışlıkla dokunmasın: 1 sn basılı tutunca kapanır
+let tutma;
+const birak = () => { clearTimeout(tutma); $("kapat").style.opacity = 1; };
+$("kapat").addEventListener("pointerdown", e => {
+  e.preventDefault();
+  // parmak biraz kaysa da düğmede sayılsın (eskiden pointerleave tutmayı bozuyordu)
+  try { $("kapat").setPointerCapture(e.pointerId); } catch (_) {}
+  $("kapat").style.opacity = .6;
+  clearTimeout(tutma);
+  tutma = setTimeout(() => { birak(); kapat(); $("durum").textContent = "Arama bitti"; }, 1000);
+});
+["pointerup", "pointercancel"].forEach(o => $("kapat").addEventListener(o, birak));
+// uzun basınca açılan yazı seçimi/menü engellenir
+["contextmenu", "selectstart"].forEach(o => $("kapat").addEventListener(o, e => e.preventDefault()));
+$("kapat").addEventListener("touchstart", e => e.preventDefault(), { passive: false });
+</script>
+</body>
+</html>

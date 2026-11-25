@@ -1,0 +1,17 @@
+# Sesli asistan (Windows + NVIDIA GPU, Python 3.10)
+torch            # CUDA sürümüne uygun olanı pytorch.org'dan kur
+coqui-tts        # XTTS v2 (model lisansı: Coqui Public Model License, ticari kullanım yok)
+faster-whisper
+silero-vad
+sounddevice
+soundfile
+librosa
+numpy
+scipy
+aiohttp
+opencv-python
+Pillow
+
+# Karakter araçları (karakter/)
+diffusers
+transformers
