@@ -1,0 +1,69 @@
+[
+  {
+    "id": "bust-sol-yanak-tutam",
+    "not": "Büst: göz kenarından çeneye inen ince pembe tutam saç grubuna girmemiş; koyu saçta kırmızı çizgi kalıyordu (sp_scan pembe_kaldi, 2026-10-23)",
+    "kareler": [
+      "*bust-*"
+    ],
+    "kutu": [
+      91,
+      82,
+      107,
+      121
+    ],
+    "kosul": {
+      "grup": [
+        0
+      ],
+      "ton": [
+        290,
+        30
+      ],
+      "doy": [
+        0.2,
+        1
+      ],
+      "par": [
+        0.3,
+        1
+      ],
+      "ten_degil": true,
+      "sac_komsu": 2
+    },
+    "yap": {
+      "grup": 1,
+      "tekrar": 8
+    }
+  },
+  {
+    "id": "bust-sol-yanak-tutam-parlak",
+    "not": "Önceki kural tutamı koyulaştırınca aradaki açık kenar pikselleri beyaz nokta gibi kaldı (sp_scan beyaz +1152); saçla çevrili olanlar saça (2026-10-23)",
+    "kareler": [
+      "*bust-*"
+    ],
+    "kutu": [
+      91,
+      82,
+      107,
+      121
+    ],
+    "kosul": {
+      "grup": [
+        0
+      ],
+      "par": [
+        0.7,
+        1
+      ],
+      "doy": [
+        0,
+        0.3
+      ],
+      "sac_komsu": 5
+    },
+    "yap": {
+      "grup": 1,
+      "tekrar": 2
+    }
+  }
+]

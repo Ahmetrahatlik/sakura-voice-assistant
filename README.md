@@ -68,7 +68,36 @@ flowchart LR
 | `gelisim.py`, `saglik.py` | Haftalık onaylı gelişim, hata bekçisi |
 | `gorevler.py`, `is_avcisi.py` | Gece/odak modu, günlük iş ilanı taraması |
 | `sakura_ui.py` | Masaüstü karaktere WM_COPYDATA ile olay gönderir |
+| `masaustu/` | Masaüstü karakter programı (C#) ve sprite araçları (aşağıda) |
 | `karakter/` | Karakter ifadelerini üreten görüntü araçları (aşağıda) |
+
+## Masaüstü karakter (`masaustu/`)
+
+Ekranın sağ alt köşesinde yaşayan pixel art Sakura, ayrı bir Windows programıdır (`Sakura.cs`, ~7.900 satır C#).
+Paket kurmadan, Windows'un yerleşik .NET Framework derleyicisiyle `build.ps1` ile tek bir `Sakura.exe` olarak derlenir.
+
+- **Masaüstü arkadaşı** — nefes alma, göz kırpma, duygu ifadeleri, sürükleme, okşama ve sevgi barı; tam ekran oyun
+  veya sunum açıkken kendini gizler, video izlerken köşede küçük (chibi) hâline geçer.
+- **Sesli asistanla bağlantı** — `sakura_ui.py` dinliyor/düşünüyor/konuşuyor olaylarını `WM_COPYDATA` ile gönderir;
+  karakterin ağzı ve balonu konuşmaya eşlik eder.
+- **Claude Code bildirimleri** — kancalar (hook) bir iş bitince, soru sorulunca ya da hata olunca Sakura'yı çağırır;
+  oturum kaydından son turun özetini çıkarıp balonda gösterir, tıklanınca ilgili pencereyi öne getirir.
+- **Mesaj bildirimleri** — WhatsApp, Telegram, Discord ve Outlook bildirimlerini Windows bildirim veritabanından salt
+  okunur izler (mesaj içeriği okunmaz); istenirse ntfy ile telefona iletir.
+- **Animasyon katmanı** — `anims.json` içindeki klipler kareyi kaydırır, döndürür, esnetir ve kalp, parıltı, ter
+  damlası gibi efektler ekler; dosya değişince program yeniden derlenmeden okur.
+- **Sentez ses** — kelime söylemeyen, ünlüleri pentatonik notalara çeviren kısa flüt sesleri (Undertale / Animal
+  Crossing tarzı); ses dosyası yok, anlık üretilir.
+- **Kişilik** — `brain/karakter.md`; cevaplar Claude Code (abonelik) ya da Claude API ile üretilir. API anahtarı
+  Windows DPAPI ile şifrelenip saklanır.
+- **İstatistik** — günlük iş/mola/mesaj sayıları ve haftalık özet penceresi.
+
+Python araçları sprite karelerini üretir: `rig.py`, `animate.py`, `poses.py` (pozlar), `emotes.py` (ifadeler),
+`aksesuar.py`, `mini.py` (chibi), `pixelize.py` / `smooth.py` (pixel art dönüşümü), `talk.py` (ağız kareleri).
+`cekim/` klasörü, "Luna Ekranda" videoları için ekran kaydı, dikey kadraj ve kurgu betiklerini içerir.
+
+Üretilmiş kareler (`frames/`, `out/`), çizimler ve kişisel ayarlar (`config.ini`, istatistikler) repoda yoktur.
+Emoji resimleri ilk kullanımda [Twemoji](https://github.com/jdecked/twemoji)'den (CC-BY 4.0) indirilir.
 
 ## Performans
 

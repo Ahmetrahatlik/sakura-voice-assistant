@@ -39,3 +39,12 @@ modeller/
 # Yedek klasörleri
 yedek-*/
 *-oncesi
+
+# Masaüstü karakter: üretilen kareler, derlenmiş program, kişisel ayarlar
+masaustu/frames/
+masaustu/out/
+masaustu/emoji/
+masaustu/Sakura.exe
+masaustu/config.ini
+masaustu/stats.csv
+masaustu/apikey.dat
